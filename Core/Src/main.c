@@ -92,6 +92,24 @@ void bootloader_main(void)
 		}
 	}
 }
+
+void DisplayMessage(char* message)
+{
+    fillRect(0, 60 + (current_line * 20), DISPLAY_WIDTH, 20, BLACK);
+    ST7735_WriteString(0, 60 + (current_line * 20), message, Font_7x10, RED, BLACK);
+
+    current_line++;
+    if (current_line > 1) {  // Reset after 4 message lines
+        current_line = 0;
+        // Clear all message areas
+        fillRect(0, 60, DISPLAY_WIDTH, 80, BLACK);
+    }
+}
+
+void ClearInputLine(void)
+{
+    fillRect(0, 0, DISPLAY_WIDTH, 26, BLACK);
+}
 /* USER CODE END 0 */
 
 /**
