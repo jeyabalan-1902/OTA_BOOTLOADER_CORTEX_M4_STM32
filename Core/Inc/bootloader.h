@@ -12,6 +12,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdint.h>
+#include <inttypes.h>
 
 #include "main.h"
 
@@ -48,9 +49,9 @@
 #define SRAM1_END             (SRAM1_BASE + SRAM1_SIZE)
 #define SRAM2_SIZE            16*1024     // STM32F446RE has 16KB of SRAM2
 #define SRAM2_END             (SRAM2_BASE + SRAM2_SIZE)
-#define FLASH_SIZE             512*1024     // STM32F446RE has 512KB of SRAM2
-#define BKPSRAM_SIZE           4*1024     // STM32F446RE has 4KB of SRAM2
-#define BKPSRAM_END            (BKPSRAM_BASE + BKPSRAM_SIZE)
+#define FLASH_SIZE            512*1024     // STM32F446RE has 512KB of SRAM2
+#define BKPSRAM_SIZE          4*1024     // STM32F446RE has 4KB of SRAM2
+#define BKPSRAM_END           (BKPSRAM_BASE + BKPSRAM_SIZE)
 
 
 extern uint8_t bl_rx_buffer[BL_RX_LEN];

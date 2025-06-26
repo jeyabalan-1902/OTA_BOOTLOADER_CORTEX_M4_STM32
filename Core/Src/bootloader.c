@@ -18,8 +18,6 @@ void  bootloader_uart_read_data(void)
 	while(1)
 	{
 		memset(bl_rx_buffer,0,200);
-		//here we will read and decode the commands coming from host
-		//first read only one byte from the host , which is the "length" field of the command packet
         HAL_UART_Receive(C_UART,bl_rx_buffer,1,HAL_MAX_DELAY);
 		rcv_len= bl_rx_buffer[0];
 		HAL_UART_Receive(C_UART,&bl_rx_buffer[1],rcv_len,HAL_MAX_DELAY);
@@ -37,7 +35,7 @@ void  bootloader_uart_read_data(void)
             case BL_MEM_WRITE:
                 bootloader_handle_mem_write_cmd(bl_rx_buffer);
                 break;
-             default:
+            default:
                 printf("BL_MSG:Invalid command code received from host \n");
                 break;
 		}
@@ -50,7 +48,6 @@ void bootloader_jump_to_user_app(void)
 
 	    printf("BL_MSG: bootloader_jump_to_user_app\n");
 
-	    // 1. Fetch MSP and Reset Handler
 	    uint32_t msp_value = *(volatile uint32_t *)FLASH_SECTOR2_BASE_ADDRESS;
 	    uint32_t reset_handler_address = *(volatile uint32_t *)(FLASH_SECTOR2_BASE_ADDRESS + 4);
 
@@ -63,27 +60,25 @@ void bootloader_jump_to_user_app(void)
 		printf("%s",msg);
 		print_To_display(msg);
 
-	    // 2. Disable interrupts
-	   // __disable_irq();
+		HAL_Delay(1000);
+
 	    HAL_RCC_DeInit();
 		HAL_DeInit();
 
-		// Reset SysTick
 		SysTick->CTRL = 0;
 		SysTick->LOAD = 0;
 		SysTick->VAL = 0;
-		//__disable_irq();
+
 		for (int i = 0; i < 8; i++) {
 			NVIC->ICER[i] = 0xFFFFFFFF;
 			NVIC->ICPR[i] = 0xFFFFFFFF;
 		}
-	    // 3. Set vector table offset and MSP
+
 	    SCB->VTOR = FLASH_SECTOR2_BASE_ADDRESS;
 		__DSB();
 		__ISB();
 	    __set_MSP(msp_value);
 
-	    // 4. Jump to application
 	    app_reset_handler = (void *)reset_handler_address;
 	    app_reset_handler();
 
@@ -98,10 +93,11 @@ void bootloader_go_reset_cmd(uint8_t *pBuffer)
 	if (! bootloader_verify_crc(&bl_rx_buffer[0],command_packet_len-4,host_crc))
 	{
 		 printf("BL_MSG:checksum success !!\n");
-		 bootloader_send_ack(pBuffer[0],1);
+		 bootloader_send_ack(pBuffer[0],0);
 		 bootloader_uart_write_data(ADDR_VALID, 1);
 		 printf("BL_MSG:Going to reset... !!\n");
-		 HAL_Delay(100);
+		 print_To_display("update completed!");
+		 HAL_Delay(1000);
 		 NVIC_SystemReset();
 	}
 	else
@@ -198,8 +194,9 @@ void bootloader_go_reset_cmd(uint8_t *pBuffer)
          bootloader_send_ack(pBuffer[0],1);
 
          char msg[60];
-         snprintf(msg, sizeof(msg), "mem write addr : %#x\n", mem_address);
-         printf("%s", msg);
+         snprintf(msg, sizeof(msg), "write addr:%#lx", mem_address);
+         printf("BL_MSG: write addr:%#lx\n", mem_address);
+         print_To_display(msg);
 
  		if( verify_address(mem_address) == ADDR_VALID )
  		{
@@ -292,15 +289,6 @@ void bootloader_go_reset_cmd(uint8_t *pBuffer)
 
  uint8_t verify_address(uint32_t go_address)
  {
- 	//so, what are the valid addresses to which we can jump ?
- 	//can we jump to system memory ? yes
- 	//can we jump to sram1 memory ?  yes
- 	//can we jump to sram2 memory ? yes
- 	//can we jump to backup sram memory ? yes
- 	//can we jump to peripheral memory ? its possible , but dont allow. so no
- 	//can we jump to external memory ? yes.
-
- //incomplete -poorly written .. optimize it
  	if ( go_address >= SRAM1_BASE && go_address <= SRAM1_END)
  	{
  		return ADDR_VALID;
@@ -321,12 +309,9 @@ void bootloader_go_reset_cmd(uint8_t *pBuffer)
  		return ADDR_INVALID;
  }
 
-  uint8_t execute_flash_erase(uint8_t sector_number , uint8_t number_of_sector)
+
+uint8_t execute_flash_erase(uint8_t sector_number , uint8_t number_of_sector)
  {
-     //we have totally 8 sectors in STM32F446RE mcu .. sector[0 to 7]
- 	//number_of_sector has to be in the range of 0 to 7
- 	// if sector_number = 0xff , that means mass erase !
- 	//Code needs to modified if your MCU supports more flash sectors
  	FLASH_EraseInitTypeDef flashErase_handle;
  	uint32_t sectorError;
  	HAL_StatusTypeDef status;
@@ -367,9 +352,7 @@ void bootloader_go_reset_cmd(uint8_t *pBuffer)
  	return INVALID_SECTOR;
  }
 
- /*This function writes the contents of pBuffer to  "mem_address" byte by byte */
- //Note1 : Currently this function supports writing to Flash only .
- //Note2 : This functions does not check whether "mem_address" is a valid address of the flash range.
+
  uint8_t execute_mem_write(uint8_t *pBuffer, uint32_t mem_address, uint32_t len)
  {
      uint8_t status=HAL_OK;
